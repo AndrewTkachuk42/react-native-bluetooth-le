@@ -42,12 +42,27 @@ export default function App() {
     console.log('setup response: ', res);
   }, []);
 
-  const write = useCallback(async () => {
-    const res = await bluetooth.write(
+  const writeString = useCallback(async () => {
+    const res = await bluetooth.writeString(
       service,
       characteristicToWrite,
       JSON.stringify({ key: 'g7H2Mi96H02Hlnyd' })
     );
+    const decoded = bluetooth.bytesToString(res.value);
+    console.log('decoded: ', decoded);
+
+    console.log('write response: ', res);
+  }, []);
+
+  const write = useCallback(async () => {
+    const res = await bluetooth.write(
+      service,
+      characteristicToWrite,
+      bluetooth.stringToBytes(JSON.stringify({ key: 'g7H2Mi96H02Hlnyd' }))
+    );
+    const decoded = bluetooth.bytesToString(res.value);
+    console.log('decoded: ', decoded);
+
     console.log('write response: ', res);
   }, []);
 
@@ -87,7 +102,11 @@ export default function App() {
   );
 
   useEffect(() => {
-    bluetooth.init();
+    bluetooth.init({ autoDecodeBytes: true });
+    bluetooth.subscribeToConnectionState((event) =>
+      console.log('state: ', event.connectionState)
+    );
+    bluetooth.subscribeToErrors((event) => console.log('error: ', event));
 
     return bluetooth.destroy;
   }, []);
@@ -99,6 +118,7 @@ export default function App() {
       <Button title="connect" onPress={connect} />
       <Button title="disconnect" onPress={disconnect} />
       <Button title="setup" onPress={setup} />
+      <Button title="write string" onPress={writeString} />
       <Button title="write key" onPress={write} />
       <Button title="read" onPress={read} />
       <Button title="notify" onPress={notify} />

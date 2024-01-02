@@ -2,9 +2,14 @@ package com.bluetoothle
 
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
+import com.bluetoothle.Strings.characteristic
+import com.bluetoothle.Strings.value
 import com.bluetoothle.types.Error
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
+
 
 object Utils {
   object CharacteristicProperties {
@@ -71,6 +76,7 @@ object Utils {
   fun getTransactionResponse(
     characteristic: BluetoothGattCharacteristic?,
     error: Error?,
+    shouldDecodeBytes: Boolean
   ): WritableMap {
     val response = Arguments.createMap().apply {
       putNull(Strings.service)
@@ -85,12 +91,47 @@ object Utils {
       Strings.characteristic,
       characteristic.uuid.toString()
     )
-    if (characteristic?.value != null) response.putString(
-      Strings.value,
-      decodeBytes(characteristic.value)
-    )
+
+    putDecodedValue(characteristic?.value, response, shouldDecodeBytes)
+
     if (error != null) response.putString(Strings.error, error.toString())
 
     return response
+  }
+
+  private fun putDecodedValue(value: ByteArray?, response: WritableMap, shouldDecodeBytes: Boolean) {
+    if (value == null) {
+      response.putNull(
+        Strings.value,
+      )
+      return
+    }
+
+    if (shouldDecodeBytes) {
+      response.putString(
+        Strings.value,
+        decodeBytes(value)
+      )
+      return
+    }
+
+    response.putArray(
+      Strings.value,
+      bytesToWritableArray(value)
+    )
+  }
+
+  fun arrayToBytes(payload: ReadableArray): ByteArray {
+    val bytes = ByteArray(payload.size())
+    for (i in 0 until payload.size()) {
+      bytes[i] = Integer.valueOf(payload.getInt(i)).toByte()
+    }
+    return bytes
+  }
+
+  private fun bytesToWritableArray(bytes: ByteArray): WritableArray? {
+    val value = Arguments.createArray()
+    for (i in bytes.indices) value.pushInt(bytes[i].toInt() and 0xFF)
+    return value
   }
 }

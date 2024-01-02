@@ -9,6 +9,8 @@ import {
   type Notification,
   type SetupOptions,
   type AdapterStateEvent,
+  type Options,
+  type ErrorEvent,
 } from '../types/types';
 import { DEFAULT_MTU_SIZE, IS_ANDROID } from '../constants/constants';
 
@@ -42,9 +44,10 @@ export class Bluetooth {
     this._events = new NativeEventEmitter(this._bluetooth);
   }
 
-  init() {
-    this.subscribeToErrors();
-    this.subscribeToConnectionState();
+  init(options?: Options) {
+    this.subscribeToConnectionState(null);
+
+    options && this._bluetooth.setOptions(options);
   }
 
   private unsubscribe = (eventType: BluetoothEvent) => {
@@ -92,8 +95,31 @@ export class Bluetooth {
 
   getConnectionState = () => this._bluetooth.getConnectionState();
 
-  write = (serviceId: string, characteristicId: string, payload: string) =>
+  writeString = (
+    serviceId: string,
+    characteristicId: string,
+    payload: string
+  ) => this._bluetooth.writeString(serviceId, characteristicId, payload);
+
+  writeStringWithoutResponse = (
+    serviceId: string,
+    characteristicId: string,
+    payload: string
+  ) =>
+    this._bluetooth.writeStringWithoutResponse(
+      serviceId,
+      characteristicId,
+      payload
+    );
+
+  write = (serviceId: string, characteristicId: string, payload: number[]) =>
     this._bluetooth.write(serviceId, characteristicId, payload);
+
+  writeWithoutResponse = (
+    serviceId: string,
+    characteristicId: string,
+    payload: number[]
+  ) => this._bluetooth.write(serviceId, characteristicId, payload);
 
   read = (serviceId: string, characteristicId: string) =>
     this._bluetooth.read(serviceId, characteristicId);
@@ -157,7 +183,11 @@ export class Bluetooth {
       return result;
     }, {});
 
-  subscribeToConnectionState = () => {
+  subscribeToConnectionState = (
+    callback: ((event: StateEvent) => any) | null
+  ) => {
+    this._onStateChangeCallback = callback;
+
     this.subscribe(
       BluetoothEvent.CONNECTION_STATE,
       this.onConnectionStateChange
@@ -167,8 +197,8 @@ export class Bluetooth {
   subscribeToAdapterState = (callback: (event: AdapterStateEvent) => any) =>
     this.subscribe(BluetoothEvent.ADAPTER_STATE, callback);
 
-  subscribeToErrors = () => {
-    this.subscribe(BluetoothEvent.ERROR, (event) => console.log(event));
+  subscribeToErrors = (callback: (event: ErrorEvent) => any) => {
+    this.subscribe(BluetoothEvent.ERROR, callback);
   };
 
   onScanCompleted = () => {
@@ -189,8 +219,6 @@ export class Bluetooth {
       [ConnectionState.SCANNING]: () => {},
       [ConnectionState.SCAN_COMPLETED]: this.onScanCompleted,
     };
-
-    console.log('state: ', connectionState);
 
     actions[connectionState]?.();
 
@@ -226,6 +254,12 @@ export class Bluetooth {
   reset = () => {
     this.removeAllListeners();
   };
+
+  bytesToString = (bytes: number[]) =>
+    bytes.map?.((byte) => String.fromCharCode(byte)).join('');
+
+  stringToBytes = (str: string) =>
+    Array.from(str, (char) => char.charCodeAt(0));
 
   destroy = () => {
     this.reset();

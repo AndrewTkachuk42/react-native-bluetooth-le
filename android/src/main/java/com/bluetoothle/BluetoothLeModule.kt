@@ -1,5 +1,6 @@
 package com.bluetoothle
 
+import com.bluetoothle.Strings.address
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
@@ -27,6 +28,11 @@ class BluetoothLeModule(
 
     //
     adapterStateReceiver.start()
+  }
+
+  @ReactMethod
+  private fun setOptions(options: ReadableMap?) {
+    gatt.setOptions(options)
   }
 
   @ReactMethod
@@ -60,7 +66,32 @@ class BluetoothLeModule(
   }
 
   @ReactMethod
-  private fun write(service: String, characteristic: String, payload: String, promise: Promise) {
+  private fun writeString(
+    service: String,
+    characteristic: String,
+    payload: String,
+    promise: Promise
+  ) {
+    gatt.writeString(service, characteristic, payload, promise)
+  }
+
+  @ReactMethod
+  private fun writeStringWithoutResponse(
+    service: String,
+    characteristic: String,
+    payload: String,
+    promise: Promise
+  ) {
+    gatt.writeStringWithoutResponse(service, characteristic, payload, promise)
+  }
+
+  @ReactMethod
+  private fun write(
+    service: String,
+    characteristic: String,
+    payload: ReadableArray,
+    promise: Promise
+  ) {
     gatt.write(service, characteristic, payload, promise)
   }
 
@@ -68,7 +99,7 @@ class BluetoothLeModule(
   private fun writeWithoutResponse(
     service: String,
     characteristic: String,
-    payload: String,
+    payload: ReadableArray,
     promise: Promise
   ) {
     gatt.writeWithoutResponse(service, characteristic, payload, promise)

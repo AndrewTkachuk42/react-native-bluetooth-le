@@ -1,5 +1,9 @@
 export type AnyCallback = (args: any) => any;
 
+export type Options = {
+  autoDecodeBytes?: boolean;
+};
+
 export enum BluetoothEvent {
   CONNECTION_STATE = 'CONNECTION_STATE',
   ADAPTER_STATE = 'ADAPTER_STATE',
@@ -28,6 +32,10 @@ export type Notification = {
 
 export type StateEvent = {
   connectionState: ConnectionState;
+};
+
+export type ErrorEvent = {
+  error: string;
 };
 
 export type DeviceData = {

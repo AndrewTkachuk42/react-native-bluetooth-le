@@ -16,6 +16,7 @@ object Strings {
   const val connectionState = "connectionState"
   const val adapterState = "adapterState"
   const val value = "value"
+  const val bytes = "bytes"
   const val uuid = "uuid"
   const val read = "read"
   const val write = "write"

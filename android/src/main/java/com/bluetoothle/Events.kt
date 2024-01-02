@@ -1,6 +1,8 @@
 package com.bluetoothle
 
 import android.bluetooth.BluetoothGattCharacteristic
+import com.bluetoothle.Strings.characteristic
+import com.bluetoothle.Utils.getTransactionResponse
 import com.bluetoothle.types.AdapterState
 import com.bluetoothle.types.ConnectionState
 import com.bluetoothle.types.Error
@@ -63,9 +65,7 @@ class Events (private val reactContext: ReactApplicationContext) {
     return params
   }
 
-  fun emitNotificationEvent(characteristic: BluetoothGattCharacteristic) {
-    val params = prepareTransactionParams(characteristic)
-
-    sendEvent(EventType.NOTIFICATION, params)
+  fun emitNotificationEvent(data: WritableMap) {
+    sendEvent(EventType.NOTIFICATION, data)
   }
 }
