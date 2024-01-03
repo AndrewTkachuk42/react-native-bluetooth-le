@@ -16,7 +16,10 @@ export default function App() {
   const startScan = useCallback(async () => {
     const onDeviceFound = (device: DeviceData) => console.log({ device });
 
-    const res = await bluetooth.startScan(onDeviceFound, { duration: 1 });
+    const res = await bluetooth.startScan(onDeviceFound, {
+      duration: 1,
+      findOne: true,
+    });
 
     console.log('scan result: ', res);
   }, []);
