@@ -73,7 +73,7 @@ class Scanner(
 
     if (!isScanning) {
       promiseManager.resolvePromise(
-        PromiseType.SCAN,
+        PromiseType.STOP_SCAN,
         Arguments.createMap().apply { putString(Strings.error, Error.IS_NOT_SCANNING.toString()) })
       return
     }

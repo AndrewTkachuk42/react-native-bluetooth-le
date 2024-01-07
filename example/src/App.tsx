@@ -6,7 +6,8 @@ import bluetoothManager from '../../src/services/bluetooth';
 
 const bluetooth = bluetoothManager.getInstance();
 
-const deviceAddress = 'A8:42:E3:74:0C:EE';
+// const deviceAddress = 'A8:42:E3:74:0C:EE';
+const deviceAddress = 'C216C9BC-016D-82B4-E36A-394A4EDB6DAD';
 const service = '7A6F10E0-DC05-11EC-9D64-0242AC120002';
 const characteristicToWrite = '2DF9DA8C-47C4-4E0C-99F2-D90DFD5A4BC3';
 const characteristicToRead = '5E427456-FD7C-4956-BDE8-1C275A7A1D9B';
@@ -18,7 +19,6 @@ export default function App() {
 
     const res = await bluetooth.startScan(onDeviceFound, {
       duration: 1,
-      findOne: true,
     });
 
     console.log('scan result: ', res);
@@ -40,8 +40,17 @@ export default function App() {
     console.log('disconnection response: ', res);
   }, []);
 
-  const setup = useCallback(async () => {
-    const res = await bluetooth.setup({ size: 512 });
+  const discoverServices = useCallback(async () => {
+    const res = await bluetooth.discoverServices({
+      services: {
+        [service]: [
+          characteristicToWrite,
+          characteristicToRead,
+          characteristicToNotify,
+        ],
+      },
+      duration: 1,
+    });
     console.log('setup response: ', res);
   }, []);
 
@@ -120,7 +129,7 @@ export default function App() {
       <Button title="stopScan" onPress={stopScan} />
       <Button title="connect" onPress={connect} />
       <Button title="disconnect" onPress={disconnect} />
-      <Button title="setup" onPress={setup} />
+      <Button title="discoverServices" onPress={discoverServices} />
       <Button title="write string" onPress={writeString} />
       <Button title="write key" onPress={write} />
       <Button title="read" onPress={read} />

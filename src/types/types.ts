@@ -66,7 +66,7 @@ export type ConnectOptions = {
 
 export type SetupOptions = {
   size?: number;
-  services?: string[];
+  services?: Record<string, string[]>;
 };
 
 export type AdapterStateEvent = {

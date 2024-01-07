@@ -13,6 +13,10 @@ class Timeout {
     func set(callback: @escaping ()->Void, duration: Int = 0) {
         cancel()
         
+        if (duration == 0) {
+            return
+        }
+        
         timeout = DispatchWorkItem {
             callback()
         }
