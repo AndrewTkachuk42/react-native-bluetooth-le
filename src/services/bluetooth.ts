@@ -7,7 +7,6 @@ import {
   type StartScan,
   type Connect,
   type Notification,
-  type SetupOptions,
   type AdapterStateEvent,
   type Options,
   type ErrorEvent,
@@ -225,27 +224,14 @@ export class Bluetooth {
     this._onStateChangeCallback?.(event);
   };
 
-  requestMtu = (size?: number): Promise<any> | void => {
-    if (!IS_ANDROID) {
-      return;
-    }
+  requestMtu = (size?: number): Promise<any> =>
+    this._bluetooth.requestMtu(size || DEFAULT_MTU_SIZE);
 
-    return this._bluetooth.requestMtu(size || DEFAULT_MTU_SIZE);
-  };
-
-  discoverServices = (services: string[] | null): Promise<any> | void => {
-    return this._bluetooth.discoverServices(services);
-  };
-
-  setup = async (options: SetupOptions) => {
-    const { size, services: servicesToDiscover } = options || {};
-
-    const { services, error: servicesError } = await this.discoverServices(
-      servicesToDiscover || null
-    );
-    const { mtu, error: mtuError } = await this.requestMtu(size);
-
-    return { mtu, services, error: mtuError || servicesError };
+  discoverServices = (options: {
+    services?: Record<string, string[]> | null;
+    duration?: number;
+  }): Promise<any> | void => {
+    return this._bluetooth.discoverServices(options);
   };
 
   unsubscribeFromAdapterState = () =>
