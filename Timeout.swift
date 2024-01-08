@@ -10,18 +10,16 @@ import Foundation
 class Timeout {
     private var timeout: DispatchWorkItem?
     
-    func set(callback: @escaping ()->Void, duration: Int = 0) {
+    func set(callback: @escaping ()->Void, duration: Int?) {
         cancel()
         
-        if (duration == 0) {
-            return
-        }
+        guard let timeoutDuration = duration, timeoutDuration > 0 else {return}
         
         timeout = DispatchWorkItem {
             callback()
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(duration), execute: timeout!)
+        DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(timeoutDuration), execute: timeout!)
     }
     
     func cancel () {

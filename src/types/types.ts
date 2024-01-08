@@ -1,7 +1,8 @@
 export type AnyCallback = (args: any) => any;
 
-export type Options = {
+export type GlobalOptions = {
   autoDecodeBytes?: boolean;
+  timeoutDuration?: number;
 };
 
 export enum BluetoothEvent {

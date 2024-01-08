@@ -10,7 +10,7 @@ class ScanOptions: NSObject {
     var name: String?
     var hasFilters: Bool = false
     var shouldFindOne: Bool = false
-    var scanDuration: Int = 0
+    var scanDuration: Int = Constants.DEFAULT_TIMEOUT
     
     init(options: NSDictionary?) {
         if (options == nil) {
@@ -19,7 +19,7 @@ class ScanOptions: NSObject {
         
         address = options?[keys.address] as? String
         name = options?[keys.name] as? String
-        scanDuration = options?[keys.duration] as? Int ?? 0
+        scanDuration = options?[keys.duration] as? Int ?? Constants.DEFAULT_TIMEOUT
         shouldFindOne = options?[keys.findOne] as? Bool ?? false
         
         if (address != nil || name != nil) {

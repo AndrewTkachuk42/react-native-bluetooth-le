@@ -8,8 +8,8 @@ import {
   type Connect,
   type Notification,
   type AdapterStateEvent,
-  type Options,
   type ErrorEvent,
+  type GlobalOptions,
 } from '../types/types';
 import { DEFAULT_MTU_SIZE, IS_ANDROID } from '../constants/constants';
 
@@ -43,7 +43,7 @@ export class Bluetooth {
     this._events = new NativeEventEmitter(this._bluetooth);
   }
 
-  init(options?: Options) {
+  init(options?: GlobalOptions) {
     this.subscribeToConnectionState(null);
 
     options && this._bluetooth.setOptions(options);
@@ -241,8 +241,8 @@ export class Bluetooth {
     this.removeAllListeners();
   };
 
-  bytesToString = (bytes: number[]) =>
-    bytes.map?.((byte) => String.fromCharCode(byte)).join('');
+  bytesToString = (bytes: number[] | null) =>
+    bytes?.map?.((byte) => String.fromCharCode(byte)).join('') || '';
 
   stringToBytes = (str: string) =>
     Array.from(str, (char) => char.charCodeAt(0));

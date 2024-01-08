@@ -18,7 +18,7 @@ import CoreBluetooth
 
 class DiscoverServicesOptions: NSObject {
     var services: [CBUUID: [CBUUID]]?
-    var duration: Int = 0
+    var duration: Int = Constants.DEFAULT_TIMEOUT
     
     init(options: NSDictionary?) {
         super.init()
@@ -27,7 +27,7 @@ class DiscoverServicesOptions: NSObject {
             return
         }
         
-        duration = options?[keys.duration] as? Int ?? 0
+        duration = options?[keys.duration] as? Int ?? Constants.DEFAULT_TIMEOUT
         services = getServices(options: options!)
     }
     
