@@ -3,11 +3,13 @@ import React, { useCallback, useEffect } from 'react';
 import { StyleSheet, View, Button } from 'react-native';
 import type { DeviceData } from '../../src/types/types';
 import bluetoothManager from '../../src/services/bluetooth';
+import { IS_ANDROID } from '../../src/constants/constants';
 
 const bluetooth = bluetoothManager.getInstance();
 
-// const deviceAddress = 'A8:42:E3:74:0C:EE';
-const deviceAddress = 'C216C9BC-016D-82B4-E36A-394A4EDB6DAD';
+const deviceAddress = IS_ANDROID
+  ? 'A8:42:E3:74:0C:EE'
+  : 'C216C9BC-016D-82B4-E36A-394A4EDB6DAD'; // Android uses mac address, ios - uuid
 const service = '7A6F10E0-DC05-11EC-9D64-0242AC120002';
 const characteristicToWrite = '2DF9DA8C-47C4-4E0C-99F2-D90DFD5A4BC3';
 const characteristicToRead = '5E427456-FD7C-4956-BDE8-1C275A7A1D9B';
@@ -60,8 +62,6 @@ export default function App() {
       characteristicToWrite,
       JSON.stringify({ key: 'g7H2Mi96H02Hlnyd' })
     );
-    const decoded = bluetooth.bytesToString(res.value);
-    console.log('decoded: ', decoded);
 
     console.log('write response: ', res);
   }, []);
@@ -72,14 +72,15 @@ export default function App() {
       characteristicToWrite,
       bluetooth.stringToBytes(JSON.stringify({ key: 'g7H2Mi96H02Hlnyd' }))
     );
-    const decoded = bluetooth.bytesToString(res.value);
-    console.log('decoded: ', decoded);
 
     console.log('write response: ', res);
   }, []);
 
   const read = useCallback(async () => {
     const res = await bluetooth.read(service, characteristicToRead);
+
+    const decoded = bluetooth.bytesToString(res.value);
+    console.log('decoded: ', decoded);
     console.log('read response: ', res);
   }, []);
 
@@ -114,7 +115,7 @@ export default function App() {
   );
 
   useEffect(() => {
-    bluetooth.init({ autoDecodeBytes: true });
+    bluetooth.init({ autoDecodeBytes: true, timeoutDuration: 5 });
     bluetooth.subscribeToConnectionState((event) =>
       console.log('state: ', event.connectionState)
     );

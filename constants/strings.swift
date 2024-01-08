@@ -30,4 +30,6 @@ struct Strings {
     static let isScanning = "isScanning"
     static let value = "value"
     static let bytes = "bytes"
+    static let isNotifying = "isNotifying"
+    static let isDestroyed = "isDestroyed"
 }

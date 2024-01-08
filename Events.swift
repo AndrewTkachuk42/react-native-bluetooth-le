@@ -25,4 +25,8 @@ class Events: NSObject {
     func emitDeviceFoundEvent(deviceData: NSDictionary){
         emitEvent(EventType.DEVICE_FOUND.rawValue, deviceData)
     }
+    
+    func emitNotificationEvent(data: NSDictionary){
+        emitEvent(EventType.NOTIFICATION.rawValue, data)
+    }
 }

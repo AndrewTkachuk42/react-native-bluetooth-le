@@ -15,16 +15,19 @@ class BluetoothCentral: NSObject {
     private let scanTimeout: Timeout = Timeout();
     private let connectionTimeout: Timeout = Timeout();
     
-    private var isAdapterEnabled: Bool = false
+    var isAdapterEnabled: Bool = false
+    var globalOptions: GlobalOptions!
     private var scanResponse: [NSDictionary] = []
     private var devices = [UUID : CBPeripheral]()
     private var scanOptions: ScanOptions = ScanOptions(options: nil)
     private var connectionOptions: ConnectionOptions = ConnectionOptions(options: nil)
     
+    
     init(peripheralManager: Peripheral, promiseManager: PromiseManager, events: Events) {
         self.events = events
         self.promiseManager = promiseManager
         self.peripheralManager = peripheralManager
+        self.globalOptions = GlobalOptions(options: nil)
         super.init()
         
         self.centralManager = CBCentralManager(delegate: self, queue: .main)
@@ -44,7 +47,7 @@ class BluetoothCentral: NSObject {
             return
         }
         
-        promiseManager.addPromise(promiseType: .SCAN,promise: resolve)
+        promiseManager.addPromise(promiseType: .SCAN,promise: resolve, timeout: nil)
         scanOptions = ScanOptions(options: options)
         devices.removeAll()
         scanResponse = []
@@ -65,7 +68,7 @@ class BluetoothCentral: NSObject {
             return
         }
         
-        promiseManager.addPromise(promiseType: .STOP_SCAN, promise: resolve)
+        promiseManager.addPromise(promiseType: .STOP_SCAN, promise: resolve, timeout: globalOptions.timeoutDuration)
         centralManager?.stopScan()
         events.emitStateChangeEvent(newState: .SCAN_COMPLETED)
         
@@ -96,7 +99,7 @@ class BluetoothCentral: NSObject {
             return
         }
         
-        promiseManager.addPromise(promiseType: .CONNECT, promise: resolve)
+        promiseManager.addPromise(promiseType: .CONNECT, promise: resolve, timeout: nil)
         connectionOptions = ConnectionOptions(options: options)
         setConnectionTimeout()
         peripheralManager.setPeripheral(peripheral: device)
@@ -113,7 +116,7 @@ class BluetoothCentral: NSObject {
         
         if (!isConnectedOrConnecting) {
             resolve?([Strings.error: NSNull(), Strings.isConnected: isConnected] as NSDictionary)
-        } else {promiseManager.addPromise(promiseType: .DISCONNECT, promise: resolve)}
+        } else {promiseManager.addPromise(promiseType: .DISCONNECT, promise: resolve, timeout: globalOptions.timeoutDuration)}
         
         guard let device = peripheralManager.device else {return}
         centralManager.cancelPeripheralConnection(device)
@@ -166,6 +169,16 @@ class BluetoothCentral: NSObject {
         
         return addressFilter && nameFilter
     }
+    
+    func destroy (resolve: RCTPromiseResolveBlock?) {
+        stopScan(resolve: nil)
+        disconnect(resolve: nil)
+        events.emitStateChangeEvent(newState: .DISCONNECTED)
+        devices.removeAll()
+        resolve?([Strings.isDestroyed: true] as NSDictionary)
+        promiseManager.resolveAllWithError(error: ErrorMessage.BLE_IS_OFF)
+        
+    }
 }
 
 extension BluetoothCentral: CBCentralManagerDelegate {
@@ -187,6 +200,7 @@ extension BluetoothCentral: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         connectionTimeout.cancel()
         resolveConnectionPromise(error: nil)
+        events.emitStateChangeEvent(newState: .CONNECTED)
     }
     
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
@@ -196,6 +210,8 @@ extension BluetoothCentral: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         resolveConnectionPromise(error: nil)
         resoveDisconnectPromise()
+        promiseManager.resolveAllWithError(error: ErrorMessage.IS_NOT_CONNECTED)
+        events.emitStateChangeEvent(newState: .DISCONNECTED)
     }
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
@@ -207,6 +223,7 @@ extension BluetoothCentral: CBCentralManagerDelegate {
             break
         case .poweredOff:
             events.emitAdapterStateChangeEvent(newState: .OFF)
+            destroy(resolve: nil)
             break
         case .resetting:
             events.emitAdapterStateChangeEvent(newState: .RESETTING)
