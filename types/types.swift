@@ -7,13 +7,11 @@
 
 
 enum EventType: String {
-    case CONNECTION_STATE, ADAPTER_STATE, DEVICE_FOUND, NOTIFICATION, ERROR
+    case CONNECTION_STATE, ADAPTER_STATE, DEVICE_FOUND, NOTIFICATION
 }
 
 enum ConnectionState: String {
     case DISCONNECTED,
-         SCANNING,
-         SCAN_COMPLETED,
          CONNECTING,
          CONNECTED,
          DISCONNECTING

@@ -1,12 +1,10 @@
 package com.bluetoothle
 
-import com.bluetoothle.GlobalOptions.Companion.keys.timeoutDuration
 import com.bluetoothle.types.Error
 import com.bluetoothle.types.PromiseType
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.WritableMap
-import com.facebook.react.bridge.WritableNativeArray
 
 class PromiseManager(private val pendingPromises: HashMap<PromiseType, MutableList<Pair<Promise, Timeout?>>>) {
   fun resolvePromise(promiseType: PromiseType, payload: WritableMap) {

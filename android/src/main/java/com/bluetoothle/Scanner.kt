@@ -3,7 +3,6 @@ package com.bluetoothle
 import android.annotation.SuppressLint
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
-import com.bluetoothle.types.ConnectionState
 import com.bluetoothle.types.Error
 import com.bluetoothle.types.PromiseType
 import com.facebook.react.bridge.Arguments
@@ -39,7 +38,6 @@ class Scanner(
     scanOptions = ScanOptions(options)
     devices.clear()
     isScanning = true
-    events.emitStateChangeEvent(ConnectionState.SCANNING)
 
     promiseManager.addPromise(PromiseType.SCAN, promise, null)
     adapter.startScan(scanOptions.filters, scanCallback)
@@ -59,8 +57,6 @@ class Scanner(
     }
 
     override fun onScanFailed(errorCode: Int) {
-      events.emitErrorEvent(Error.SCAN_ERROR)
-
       onScanStopped()
     }
   }
@@ -84,7 +80,6 @@ class Scanner(
 
   fun onScanStopped() {
     isScanning = false
-    events.emitStateChangeEvent(ConnectionState.SCAN_COMPLETED)
 
     val scanResponse = WritableNativeArray()
 
