@@ -55,7 +55,6 @@ export class Bluetooth {
     this._activeListeners = this._activeListeners.filter(
       (type) => type !== eventType
     );
-    console.log('listeners left: ', this._activeListeners);
   };
 
   private subscribe = (
@@ -66,8 +65,6 @@ export class Bluetooth {
     this._events.addListener(eventType, callback);
 
     this._activeListeners.push(eventType);
-
-    console.log('subscribed to: ', this._activeListeners);
   };
 
   private removeAllListeners = () =>
@@ -145,7 +142,6 @@ export class Bluetooth {
       this.subscribe(BluetoothEvent.NOTIFICATION, this.onNotification);
     }
 
-    console.log('cb: ', this._notificationCallbacks);
     return response;
   };
 
@@ -168,7 +164,6 @@ export class Bluetooth {
       }
     }
 
-    console.log('cb: ', this._notificationCallbacks);
     return response;
   };
 

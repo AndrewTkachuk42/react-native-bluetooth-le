@@ -40,7 +40,7 @@ class PromiseManager: NSObject {
             resolvePromise(promiseType: promiseType, payload: [Strings.error: ErrorMessage.TIMEOUT.rawValue] as NSDictionary)
         }
         
-        var timeout = Timeout()
+        let timeout = Timeout()
         timeout.set(callback: onTimeout, duration: timeoutDuration)
         return timeout
     }

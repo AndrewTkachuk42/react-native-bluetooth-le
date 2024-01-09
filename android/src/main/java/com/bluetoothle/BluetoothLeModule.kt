@@ -26,13 +26,14 @@ class BluetoothLeModule(
     scanner = Scanner(adapter, promiseManager, events)
     adapterStateReceiver = AdapterStateReceiver(reactContext, gatt, scanner, promiseManager, events)
 
-    //
     adapterStateReceiver.start()
   }
 
   @ReactMethod
   private fun setOptions(options: ReadableMap?) {
-    gatt.setOptions(options)
+    val globalOptions = GlobalOptions(options)
+    gatt.globalOptions = globalOptions
+    scanner.globalOptions = globalOptions
   }
 
   @ReactMethod
@@ -61,7 +62,7 @@ class BluetoothLeModule(
   }
 
   @ReactMethod
-  private fun discoverServices(services: ReadableArray?, promise: Promise) {
+  private fun discoverServices(services: ReadableMap?, promise: Promise) {
     gatt.discoverServices(promise)
   }
 

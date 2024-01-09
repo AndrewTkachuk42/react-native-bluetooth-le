@@ -21,39 +21,36 @@ class Scanner(
   private var isScanning = false
   private val timeout = Timeout()
   private lateinit var scanOptions: ScanOptions
-
   private var devices: HashMap<String, ScanResult> = HashMap()
+  var globalOptions = GlobalOptions(null)
 
   fun startScan(options: ReadableMap?, promise: Promise) {
-    promiseManager.addPromise(PromiseType.SCAN, promise)
-
     if (isScanning) {
-      promiseManager.resolvePromise(
-        PromiseType.SCAN,
+      promise.resolve(
         Arguments.createMap().apply { putString( Strings.error, Error.IS_ALREADY_SCANNING.toString()) })
       return
     }
 
     if (!adapter.isEnabled()) {
-      onAdapterDisabled(PromiseType.SCAN)
+      onAdapterDisabled(promise)
       return
     }
 
     scanOptions = ScanOptions(options)
-
     devices.clear()
-
     isScanning = true
     events.emitStateChangeEvent(ConnectionState.SCANNING)
 
+    promiseManager.addPromise(PromiseType.SCAN, promise, null)
     adapter.startScan(scanOptions.filters, scanCallback)
     setScanTimeout()
   }
 
   private val scanCallback = object : ScanCallback() {
     override fun onScanResult(callbackType: Int, result: ScanResult) {
-      events.emitDeviceFoundEvent(prepareDiscoveredData(result))
+      if (devices[result.device.address] != null) return
 
+      events.emitDeviceFoundEvent(prepareDiscoveredData(result))
       devices[result.device.address] = result
 
       if (scanOptions.shouldFindOne) {
@@ -72,14 +69,14 @@ class Scanner(
     cancelErrorTimeout()
 
     if (!isScanning) {
-      promiseManager.resolvePromise(
-        PromiseType.STOP_SCAN,
-        Arguments.createMap().apply { putString(Strings.error, Error.IS_NOT_SCANNING.toString()) })
+      promise?.resolve(Arguments.createMap().apply {
+        putString(Strings.error, Error.IS_NOT_SCANNING.toString())
+        putBoolean(Strings.isScanning, isScanning)
+      })
       return
     }
 
-    promiseManager.addPromise(PromiseType.STOP_SCAN, promise)
-
+    promiseManager.addPromise(PromiseType.STOP_SCAN, promise, globalOptions.timeoutDuration)
     adapter.stopScan(scanCallback)
 
     onScanStopped()
@@ -104,13 +101,14 @@ class Scanner(
 
     val stopScanResponse = Arguments.createMap().apply {
       putBoolean(Strings.isScanning, isScanning)
+      putNull(Strings.error)
     }
     promiseManager.resolvePromise(PromiseType.STOP_SCAN, stopScanResponse)
   }
 
-  private fun onAdapterDisabled(promiseType: PromiseType) {
+  private fun onAdapterDisabled(promise: Promise) {
     val response = Arguments.createMap().apply { putString( Strings.error, Error.BLE_IS_OFF.toString()) }
-    promiseManager.resolvePromise(promiseType, response)
+    promise.resolve(response)
   }
 
   private fun setScanTimeout() {

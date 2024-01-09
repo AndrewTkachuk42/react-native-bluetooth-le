@@ -14,4 +14,5 @@ enum class Error {
   READ_ERROR,
   WRITE_ERROR,
   NOTIFICATIONS_ERROR,
+  TIMEOUT
 }

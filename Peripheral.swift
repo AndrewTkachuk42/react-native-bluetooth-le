@@ -165,7 +165,7 @@ class Peripheral: NSObject {
             }
         }
         
-        return [Strings.services: servicesMap]
+        return [Strings.services: servicesMap, Strings.error: NSNull()]
     }
     
     func decodeBytes (data: Data?) -> Any? {
