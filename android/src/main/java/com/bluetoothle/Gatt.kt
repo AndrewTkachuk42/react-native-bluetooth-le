@@ -72,7 +72,6 @@ class Gatt(
     val device = if (isDeviceFound) gattDevice else adapter.getDevice(address)
 
     if (device == null) {
-      events.emitErrorEvent(Error.DEVICE_NOT_FOUND)
       promise.resolve(Arguments.createMap().apply {
         putBoolean(Strings.isConnected, connectionState == ConnectionState.CONNECTED)
       })
@@ -127,10 +126,6 @@ class Gatt(
     promise.resolve(response)
   }
 
-  private fun onGattError() {
-    events.emitErrorEvent(Error.GATT_ERROR)
-  }
-
   private fun onConnected() {
     timeout.cancel()
     resolveConnectionPromise()
@@ -144,7 +139,7 @@ class Gatt(
   private val gattCallback = object : BluetoothGattCallback() {
     override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
       if (status != BluetoothGatt.GATT_SUCCESS) {
-        onGattError()
+        promiseManager.resolveAllWithError(Error.GATT_ERROR)
       }
 
       connectionState = ConnectionStateMap[newState] ?: ConnectionState.DISCONNECTED
@@ -189,8 +184,6 @@ class Gatt(
       status: Int
     ) {
       if (status != BluetoothGatt.GATT_SUCCESS) {
-        events.emitErrorEvent(Error.TRANSACTION_ERROR)
-
         promiseManager.resolvePromise(
           PromiseType.WRITE, getTransactionResponse(
             characteristic,
@@ -510,6 +503,7 @@ class Gatt(
     bluetoothGatt?.close()
     bluetoothGatt = null
     connectionState = ConnectionState.DISCONNECTED
+    events.emitStateChangeEvent(ConnectionState.DISCONNECTED)
   }
 
   companion object {

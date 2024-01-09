@@ -38,14 +38,6 @@ class Events (private val reactContext: ReactApplicationContext) {
     sendEvent(EventType.DEVICE_FOUND, deviceScanData)
   }
 
-  fun emitErrorEvent(error: Error) {
-    val params = Arguments.createMap().apply {
-      putString(Strings.error, error.toString())
-    }
-
-    sendEvent(EventType.ERROR, params)
-  }
-
   private fun prepareTransactionParams(characteristic: BluetoothGattCharacteristic):  WritableMap {
     var message = ""
     val charset = Charsets.UTF_8

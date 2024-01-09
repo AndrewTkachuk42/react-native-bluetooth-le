@@ -5,12 +5,20 @@ export type GlobalOptions = {
   timeoutDuration?: number;
 };
 
+export enum AdapterState {
+  OFF = 'OFF',
+  TURNING_OFF = 'TURNING_OFF',
+  TURNING_ON = 'TURNING_ON',
+  ON = 'ON',
+}
+
 export enum BluetoothEvent {
   CONNECTION_STATE = 'CONNECTION_STATE',
   ADAPTER_STATE = 'ADAPTER_STATE',
   DEVICE_FOUND = 'DEVICE_FOUND',
   ERROR = 'ERROR',
   NOTIFICATION = 'NOTIFICATION',
+  SCAN_STATE = 'SCAN_STATE',
 }
 
 export enum BluetoothError {
@@ -35,8 +43,6 @@ export enum BluetoothError {
 
 export enum ConnectionState {
   DISCONNECTED = 'DISCONNECTED',
-  SCANNING = 'SCANNING',
-  SCAN_COMPLETED = 'SCAN_COMPLETED',
   CONNECTING = 'CONNECTING',
   CONNECTED = 'CONNECTED',
   DISCONNECTING = 'DISCONNECTING',
@@ -53,6 +59,10 @@ export type StateEvent = {
   connectionState: ConnectionState;
 };
 
+export type ScanEvent = {
+  isScanning: boolean;
+};
+
 export type ErrorEvent = {
   error: BluetoothError;
 };
@@ -65,12 +75,21 @@ export type DeviceData = {
 
 export type ScanCallback = (device: DeviceData) => void;
 
+export type ScanResult = {
+  error: BluetoothError | null;
+  devices: DeviceData[];
+};
+
 export type StartScan = (
   callback: ScanCallback | null,
   options?: ScanOptions
-) => Promise<any>;
+) => Promise<ScanResult>;
 
 export type Connect = (address: string, options?: ConnectOptions) => void;
+
+export type isEnabled = () => Promise<{ isEnabled: boolean }>;
+export type isConnected = () => Promise<{ isConnected: boolean }>;
+export type getConnectionState = () => Promise<{ state: ConnectionState }>;
 
 export type ScanOptions = {
   address?: string;
@@ -89,5 +108,37 @@ export type SetupOptions = {
 };
 
 export type AdapterStateEvent = {
-  adapterState: string;
+  adapterState: AdapterState;
 };
+
+export type TransactionResponse = {
+  error: BluetoothError | null;
+  service: string | null;
+  characteristic: string | null;
+  value: number[] | string | null;
+  isNotifying?: boolean;
+};
+
+export type Characteristic = {
+  read: boolean;
+  write: boolean;
+  writeWithoutResponse: boolean;
+  notify: boolean;
+};
+
+type UUID = string;
+
+type Services = Record<UUID, Record<UUID, Characteristic>>;
+
+export type DiscoverServices = (options: {
+  services?: Record<UUID, UUID[]> | null;
+  duration?: number;
+}) => Promise<{
+  error: BluetoothError | null;
+  services: Services;
+}>;
+
+export type RequestMtu = (size?: number) => Promise<{
+  error: BluetoothError | null;
+  mtu: number;
+}>;

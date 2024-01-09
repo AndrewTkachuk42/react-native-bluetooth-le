@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import com.bluetoothle.types.AdapterState
 import com.bluetoothle.types.Error
-import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactApplicationContext
 
 class AdapterStateReceiver(

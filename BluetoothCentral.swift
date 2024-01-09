@@ -54,9 +54,6 @@ class BluetoothCentral: NSObject {
         
         setScanTimeout()
         centralManager?.scanForPeripherals(withServices: nil)
-        
-        
-        events.emitStateChangeEvent(newState: ConnectionState.SCANNING)
     }
     
     func stopScan(resolve: RCTPromiseResolveBlock?) {
@@ -70,7 +67,6 @@ class BluetoothCentral: NSObject {
         
         promiseManager.addPromise(promiseType: .STOP_SCAN, promise: resolve, timeout: globalOptions.timeoutDuration)
         centralManager?.stopScan()
-        events.emitStateChangeEvent(newState: .SCAN_COMPLETED)
         
         promiseManager.resolvePromise(promiseType: .SCAN, payload: prepareScanResopnse())
         promiseManager.resolvePromise(promiseType: .STOP_SCAN, payload: [Strings.isScaning: centralManager.isScanning, Strings.error: NSNull()])
