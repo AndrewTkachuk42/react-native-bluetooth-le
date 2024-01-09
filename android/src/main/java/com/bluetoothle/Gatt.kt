@@ -33,45 +33,35 @@ class Gatt(
   private val timeout = Timeout()
   private var bluetoothGatt: BluetoothGatt? = null
   private lateinit var connectionOptions: ConnectionOptions
-  private var options = GattOptions(null)
-
-  fun setOptions(gattOptions: ReadableMap?) {
-    options = GattOptions(gattOptions)
-  }
+  var globalOptions = GlobalOptions(null)
 
   fun isEnabled(promise: Promise) {
-    promiseManager.addPromise(PromiseType.IS_ENABLED, promise)
-
     val response = Arguments.createMap().apply {
       putBoolean(Strings.isEnabled, adapter.isEnabled())
     }
 
-    promiseManager.resolvePromise(PromiseType.IS_ENABLED, response)
+    promise.resolve(response)
   }
 
   fun getConnectionState(promise: Promise) {
-    promiseManager.addPromise(PromiseType.CONNECTION_STATE, promise)
-
     val response = Arguments.createMap().apply {
       putString(Strings.state, connectionState.toString())
     }
 
-    promiseManager.resolvePromise(PromiseType.CONNECTION_STATE, response)
+    promise.resolve(response)
   }
 
   fun isConnected(promise: Promise) {
-    promiseManager.addPromise(PromiseType.IS_CONNECTED, promise)
-
     val isConnected = connectionState == ConnectionState.CONNECTED
 
     val response = Arguments.createMap().apply {
       putBoolean(Strings.isConnected, isConnected)
     }
 
-    promiseManager.resolvePromise(PromiseType.IS_CONNECTED, response)
+    promise.resolve(response)
   }
 
-  private fun getDevice(address: String): BluetoothDevice? {
+  private fun getDevice(address: String, promise: Promise): BluetoothDevice? {
     val gattDevice = bluetoothGatt?.device
     val isDeviceFound = gattDevice != null && gattDevice.address.toString() == address
 
@@ -83,7 +73,9 @@ class Gatt(
 
     if (device == null) {
       events.emitErrorEvent(Error.DEVICE_NOT_FOUND)
-      resolveConnectionPromise()
+      promise.resolve(Arguments.createMap().apply {
+        putBoolean(Strings.isConnected, connectionState == ConnectionState.CONNECTED)
+      })
       return null
     }
 
@@ -91,15 +83,15 @@ class Gatt(
   }
 
   fun connect(address: String, options: ReadableMap?, promise: Promise) {
-    promiseManager.addPromise(PromiseType.CONNECT, promise)
-
     if (!adapter.isEnabled()) {
-      onAdapterDisabled(PromiseType.CONNECT)
+      onAdapterDisabled(promise)
       return
     }
 
     if (connectionState != ConnectionState.DISCONNECTED) {
-      resolveConnectionPromise()
+      promise.resolve(Arguments.createMap().apply {
+        putBoolean(Strings.isConnected, connectionState == ConnectionState.CONNECTED)
+      })
       return
     }
 
@@ -107,7 +99,9 @@ class Gatt(
 
     setConnectionTimeout()
 
-    val device = getDevice(address) ?: return
+    val device = getDevice(address, promise) ?: return
+
+    promiseManager.addPromise(PromiseType.CONNECT, promise, null)
 
     if (bluetoothGatt != null) {
       bluetoothGatt?.connect()
@@ -127,10 +121,10 @@ class Gatt(
     timeout.set(onTimeout, connectionOptions.connectionDuration)
   }
 
-  private fun onAdapterDisabled(promiseType: PromiseType) {
+  private fun onAdapterDisabled(promise: Promise) {
     val response =
       Arguments.createMap().apply { putString(Strings.error, Error.BLE_IS_OFF.toString()) }
-    promiseManager.resolvePromise(promiseType, response)
+    promise.resolve(response)
   }
 
   private fun onGattError() {
@@ -177,14 +171,14 @@ class Gatt(
       if (status == BluetoothGatt.GATT_SUCCESS) {
         promiseManager.resolvePromise(
           PromiseType.READ,
-          getTransactionResponse(characteristic, null, options.autoDecode)
+          getTransactionResponse(characteristic, null, globalOptions.autoDecode)
         )
         return
       }
 
       promiseManager.resolvePromise(
         PromiseType.READ,
-        getTransactionResponse(characteristic, Error.READ_ERROR, options.autoDecode)
+        getTransactionResponse(characteristic, Error.READ_ERROR, globalOptions.autoDecode)
       )
 
     }
@@ -200,7 +194,7 @@ class Gatt(
         promiseManager.resolvePromise(
           PromiseType.WRITE, getTransactionResponse(
             characteristic,
-            Error.WRITE_ERROR, options.autoDecode
+            Error.WRITE_ERROR, globalOptions.autoDecode
           )
         )
         return
@@ -209,7 +203,7 @@ class Gatt(
       promiseManager.resolvePromise(
         PromiseType.WRITE, getTransactionResponse(
           characteristic,
-          null, options.autoDecode
+          null, globalOptions.autoDecode
         )
       )
     }
@@ -222,7 +216,7 @@ class Gatt(
       if (status == BluetoothGatt.GATT_SUCCESS) {
         promiseManager.resolvePromise(
           PromiseType.NOTIFICATIONS,
-          getTransactionResponse(descriptor?.characteristic, null, options.autoDecode)
+          getTransactionResponse(descriptor?.characteristic, null, globalOptions.autoDecode)
         )
         return
       }
@@ -232,7 +226,7 @@ class Gatt(
         getTransactionResponse(
           descriptor?.characteristic,
           Error.NOTIFICATIONS_ERROR,
-          options.autoDecode
+          globalOptions.autoDecode
         )
       )
     }
@@ -241,7 +235,7 @@ class Gatt(
       gatt: BluetoothGatt,
       characteristic: BluetoothGattCharacteristic
     ) {
-      events.emitNotificationEvent(getTransactionResponse(characteristic, null, options.autoDecode))
+      events.emitNotificationEvent(getTransactionResponse(characteristic, null, globalOptions.autoDecode))
     }
 
     override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
@@ -252,42 +246,38 @@ class Gatt(
   private fun getCharacteristicAndCheckConnection(
     serviceId: String,
     characteristicId: String,
-    promiseType: PromiseType,
+    promise: Promise,
   ): BluetoothGattCharacteristic? {
 
+    val response = Arguments.createMap().apply {
+      putString(Strings.service, serviceId)
+      putString(Strings.characteristic, characteristicId)
+      putNull(Strings.error)}
+
     if (!adapter.isEnabled()) {
-      onAdapterDisabled(promiseType)
+      response.putString(Strings.error, Error.BLE_IS_OFF.toString())
+      promise.resolve(response)
       return null
     }
 
     if (connectionState != ConnectionState.CONNECTED) {
-      val response = Arguments.createMap().apply {
-        putString(Strings.service, serviceId)
-        putString(Strings.characteristic, characteristicId)
-        putString(Strings.error, Error.IS_NOT_CONNECTED.toString())
-      }
+      response.putString(Strings.error, Error.IS_NOT_CONNECTED.toString())
 
-      promiseManager.resolvePromise(
-        promiseType,
-        response
-      )
-
+      promise.resolve(response)
       return null
     }
 
-    return getCharacteristic(serviceId, characteristicId, promiseType)
+    return getCharacteristic(serviceId, characteristicId, promise)
   }
 
   fun writeString(serviceId: String, characteristicId: String, payload: String, promise: Promise) {
-    promiseManager.addPromise(PromiseType.WRITE, promise)
-
     val characteristic = getCharacteristicAndCheckConnection(
       serviceId,
       characteristicId,
-      PromiseType.WRITE
+      promise
     ) ?: return
 
-    writeCharacteristic(characteristic, payload.toByteArray(), null)
+    writeCharacteristic(characteristic, payload.toByteArray(), null, promise)
   }
 
   fun writeStringWithoutResponse(
@@ -296,31 +286,28 @@ class Gatt(
     payload: String,
     promise: Promise
   ) {
-    promiseManager.addPromise(PromiseType.WRITE, promise)
-
     val characteristic = getCharacteristicAndCheckConnection(
       serviceId,
       characteristicId,
-      PromiseType.WRITE
+      promise
     ) ?: return
 
     writeCharacteristic(
       characteristic,
       payload.toByteArray(),
-      BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+      BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE,
+      promise
     )
   }
 
   fun write(serviceId: String, characteristicId: String, payload: ReadableArray, promise: Promise) {
-    promiseManager.addPromise(PromiseType.WRITE, promise)
-
     val characteristic = getCharacteristicAndCheckConnection(
       serviceId,
       characteristicId,
-      PromiseType.WRITE
+      promise
     ) ?: return
 
-    writeCharacteristic(characteristic, arrayToBytes(payload), null)
+    writeCharacteristic(characteristic, arrayToBytes(payload), null, promise)
   }
 
   fun writeWithoutResponse(
@@ -329,59 +316,59 @@ class Gatt(
     payload: ReadableArray,
     promise: Promise
   ) {
-    promiseManager.addPromise(PromiseType.WRITE, promise)
-
     val characteristic = getCharacteristicAndCheckConnection(
       serviceId,
       characteristicId,
-      PromiseType.WRITE
+      promise
     ) ?: return
 
     writeCharacteristic(
       characteristic,
       arrayToBytes(payload),
-      BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+      BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE,
+      promise,
     )
   }
 
   private fun writeCharacteristic(
     characteristic: BluetoothGattCharacteristic,
     value: ByteArray,
-    writeType: Int?
+    writeType: Int?,
+    promise: Promise
   ) {
     characteristic.value = value
     characteristic.writeType = writeType ?: BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+
+    promiseManager.addPromise(PromiseType.WRITE, promise, globalOptions.timeoutDuration)
     try {
       bluetoothGatt?.writeCharacteristic(characteristic)
     } catch (error: Throwable) {
       promiseManager.resolvePromise(
         PromiseType.WRITE, getTransactionResponse(
           characteristic,
-          Error.WRITE_ERROR, options.autoDecode
+          Error.WRITE_ERROR, globalOptions.autoDecode
         )
       )
     }
   }
 
   fun read(serviceId: String, characteristicId: String, promise: Promise) {
-    promiseManager.addPromise(PromiseType.READ, promise)
-
     val characteristic = getCharacteristicAndCheckConnection(
       serviceId,
       characteristicId,
-      PromiseType.READ
+      promise
     ) ?: return
+
+    promiseManager.addPromise(PromiseType.READ, promise, globalOptions.timeoutDuration)
 
     try {
       bluetoothGatt?.readCharacteristic(characteristic)
     } catch (error: Throwable) {
-      promiseManager.resolvePromise(
-        PromiseType.READ, getTransactionResponse(
-          characteristic,
-          Error.READ_ERROR,
-          options.autoDecode
-        )
-      )
+      promise.resolve(getTransactionResponse(
+        characteristic,
+        Error.READ_ERROR,
+        globalOptions.autoDecode
+      ))
     }
   }
 
@@ -399,12 +386,10 @@ class Gatt(
     enable: Boolean,
     promise: Promise
   ) {
-    promiseManager.addPromise(PromiseType.NOTIFICATIONS, promise)
-
     val characteristic = getCharacteristicAndCheckConnection(
       serviceId,
       characteristicId,
-      PromiseType.NOTIFICATIONS
+      promise
     ) ?: return
 
     val descriptorUUID = characteristic.descriptors?.firstOrNull()?.uuid
@@ -415,55 +400,50 @@ class Gatt(
       characteristic.getDescriptor(descriptorUUID).let { cccDescriptor ->
         if (bluetoothGatt?.setCharacteristicNotification(characteristic, true) == false) {
 
-          promiseManager.resolvePromise(
-            PromiseType.NOTIFICATIONS,
-            getTransactionResponse(characteristic, Error.NOTIFICATIONS_ERROR, options.autoDecode)
+          promise.resolve(
+            getTransactionResponse(characteristic, Error.NOTIFICATIONS_ERROR, globalOptions.autoDecode)
           )
           return
         }
 
         cccDescriptor.value = payload
+
+        promiseManager.addPromise(PromiseType.NOTIFICATIONS, promise, globalOptions.timeoutDuration)
         bluetoothGatt?.writeDescriptor(cccDescriptor)
       }
     } catch (error: Throwable) {
       promiseManager.resolvePromise(
         PromiseType.NOTIFICATIONS,
-        getTransactionResponse(characteristic, Error.NOTIFICATIONS_ERROR, options.autoDecode)
+        getTransactionResponse(characteristic, Error.NOTIFICATIONS_ERROR, globalOptions.autoDecode)
       )
     }
   }
 
   fun requestMtu(size: Int?, promise: Promise) {
-    promiseManager.addPromise(PromiseType.MTU, promise)
-
     if (connectionState != ConnectionState.CONNECTED) {
-      val response = Arguments.createMap().apply {
+      promise.resolve(Arguments.createMap().apply {
         putString(Strings.error, Error.IS_NOT_CONNECTED.toString())
         putNull(Strings.mtu)
-      }
-
-      promiseManager.resolvePromise(PromiseType.MTU, response)
+      })
       return
     }
 
-
+    promiseManager.addPromise(PromiseType.MTU, promise, globalOptions.timeoutDuration)
     bluetoothGatt?.requestMtu(size ?: GATT_MAX_MTU_SIZE)
   }
 
   fun discoverServices(promise: Promise) {
-    promiseManager.addPromise(PromiseType.DISCOVER_SERVICES, promise)
-
     if (connectionState != ConnectionState.CONNECTED) {
       val response = Arguments.createMap().apply {
         putString(Strings.error, Error.IS_NOT_CONNECTED.toString())
         putNull(Strings.services)
       }
 
-      promiseManager.resolvePromise(PromiseType.DISCOVER_SERVICES, response)
+      promise.resolve(response)
       return
     }
 
-
+    promiseManager.addPromise(PromiseType.DISCOVER_SERVICES, promise, globalOptions.timeoutDuration)
     bluetoothGatt?.discoverServices()
   }
 
@@ -486,25 +466,21 @@ class Gatt(
   private fun getCharacteristic(
     serviceId: String,
     characteristicId: String,
-    promiseType: PromiseType,
+    promise: Promise,
   ): BluetoothGattCharacteristic? {
     val service = bluetoothGatt?.getService(UUID.fromString(serviceId.lowercase()))
     if (service == null) {
-      promiseManager.resolvePromise(
-        promiseType, getTransactionResponse(
-          null,
-          Error.SERVICE_NOT_FOUND,
-          options.autoDecode
-        )
-      )
+      promise.resolve(getTransactionResponse(
+        null,
+        Error.SERVICE_NOT_FOUND,
+        globalOptions.autoDecode
+      ))
     }
     val characteristic = service?.getCharacteristic(UUID.fromString(characteristicId.lowercase()))
     if (characteristic == null) {
-      promiseManager.resolvePromise(
-        promiseType, getTransactionResponse(
-          null, Error.CHARACTERISTIC_NOT_FOUND, options.autoDecode
-        )
-      )
+      promise.resolve(getTransactionResponse(
+        null, Error.CHARACTERISTIC_NOT_FOUND, globalOptions.autoDecode
+      ))
       return null
     }
 
@@ -518,14 +494,15 @@ class Gatt(
   }
 
   fun disconnect(promise: Promise?) {
-    promiseManager.addPromise(PromiseType.DISCONNECT, promise)
+    if (connectionState != ConnectionState.CONNECTED) {
+      promise?.resolve(Arguments.createMap().apply {
+        putBoolean(Strings.isConnected, connectionState == ConnectionState.CONNECTED)
+      })
+    } else {
+      promiseManager.addPromise(PromiseType.DISCONNECT, promise, globalOptions.timeoutDuration)
+    }
 
     bluetoothGatt?.disconnect()
-
-    if (connectionState != ConnectionState.CONNECTED) {
-      resolveDisconnectPromise()
-      return
-    }
   }
 
   fun destroyGatt() {

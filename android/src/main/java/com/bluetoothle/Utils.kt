@@ -32,27 +32,26 @@ object Utils {
       with(service) {
         val characteristicsMap = Arguments.createMap()
         characteristics.forEach { characteristic ->
+          val propertiesMap = Arguments.createMap()
           val properties = characteristic.properties
-          characteristicsMap.putString(
-            CharacteristicProperties.uuid,
-            characteristic.uuid.toString()
-          )
-          characteristicsMap.putBoolean(
+
+          propertiesMap.putBoolean(
             CharacteristicProperties.read,
             hasProperty(properties, BluetoothGattCharacteristic.PROPERTY_READ)
           )
-          characteristicsMap.putBoolean(
+          propertiesMap.putBoolean(
             CharacteristicProperties.writeWithoutResponse,
             hasProperty(properties, BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE)
           )
-          characteristicsMap.putBoolean(
+          propertiesMap.putBoolean(
             CharacteristicProperties.write,
             hasProperty(properties, BluetoothGattCharacteristic.PROPERTY_WRITE)
           )
-          characteristicsMap.putBoolean(
+          propertiesMap.putBoolean(
             CharacteristicProperties.notify,
             hasProperty(properties, BluetoothGattCharacteristic.PROPERTY_WRITE)
           )
+          characteristicsMap.putMap(characteristic.uuid.toString(), propertiesMap)
         }
         servicesMap.putMap(service.uuid.toString(), characteristicsMap)
       }

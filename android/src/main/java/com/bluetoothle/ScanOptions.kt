@@ -33,8 +33,8 @@ class ScanOptions(options: ReadableMap?) {
   }
 
   private fun getScanFilters(options: ReadableMap): List<ScanFilter>? {
-    val name = options.getString(deviceName)
-    val address = options.getString(deviceAddress)
+    val name = options.getString(name)
+    val address = options.getString(address)
 
     if (name == null && address == null) {
       return null
@@ -54,8 +54,8 @@ class ScanOptions(options: ReadableMap?) {
   }
 
   companion object {
-    const val deviceName = "deviceName"
-    const val deviceAddress = "deviceAddress"
+    const val name = "name"
+    const val address = "address"
     const val duration = "duration"
     const val findOne = "findOne"
   }
